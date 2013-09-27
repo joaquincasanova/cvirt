@@ -9,35 +9,6 @@
 using namespace cv;
 using namespace std;
 
-int hsvcalc(Mat image, Mat hsv_image){
-
-  Mat hsv_image(image.rows,image.cols,CV_32FC3);
-  float alpha = 0, beta = 0, hue = 0, saturation = 0, value = 0;
-  float r = 0, b = 0, g = 0, R =0, B = 0, G = 0;
-
-  for(int i=0;i<image.rows;i++){
-    for(int j=0;j<image.cols;j++){
-      R = image.ptr<uchar>(i)[3*j+2];
-      G = image.ptr<uchar>(i)[3*j+1];
-      B = image.ptr<uchar>(i)[3*j+0];
-      r = R/(R+G+B);
-      g = G/(R+G+B);
-      b = B/(R+G+B);
-      alpha = sqrt(3)*0.5*(g-b);
-      beta = 0.5*(2.0*r-g-b);
-      hue = fmod(atan2(alpha,beta)*180/CV_PI,360.0);
-      //hue = atan2(alpha,beta)*180/CV_PI;
-      value = max(max(R,G),B);
-      saturation = sqrt(alpha*alpha+beta*beta);
-      hsv_image.at<float>(i,3*j+0)=hue;//to use this in EM, need to divide by 2, convert to CV_8UC1, convert back to CV_32FC1, and multiply by 2
-      hsv_image.at<float>(i,3*j+1)=saturation;
-      hsv_image.at<float>(i,3*j+2)=value;
-    }
-  }
-
-  return 0;
-}
-
 int hvhist(Mat hsv){
     int hbins = 32, vbins = 32;
     int histSize[] = {hbins, vbins};
@@ -134,11 +105,11 @@ int main( int argc, char** argv )
 {
     if( argc != 2)
     {
-     cout <<" Usage: display_image ImageToLoadAndDisplay" << endl;
+     cout <<" Usage: cvirt ImageToLoadAndDisplay" << endl;
      return -1;
     }
 
-    Mat image, hsv, h,hu;
+    Mat image, hsv, h;
     vector<Mat> hsvsplit;
     CvEM em;
     clock_t timer1, timer2;
@@ -170,15 +141,15 @@ int main( int argc, char** argv )
     cout << seconds << " for cvtColor" << std::endl;
 
     split(hsv, hsvsplit);//split into channels
-    hu = hsvsplit[0];
+    h = hsvsplit[0];
 
     namedWindow( "Hue", CV_WINDOW_AUTOSIZE ); // Create a window for display.
-    imshow( "Hue", hu);                // Show our image inside it.
+    imshow( "Hue", h);                // Show our image inside it.
 
     waitKey(0); // Wait for a keystroke in the window
     destroyWindow( "Hue" );
 
-    hu.convertTo(h, CV_32F);
+    h.convertTo(h, CV_32F);
     h *= 2.0;//opencv h is h/2 to fit in 0-255 range
     hvhist(hsv);
 
