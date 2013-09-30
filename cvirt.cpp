@@ -3,6 +3,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/ml/ml.hpp>
 #include <iostream>
+#include <fstream>
 #include <stdlib.h>
 #include <time.h>
 
@@ -107,9 +108,8 @@ int main( int argc, char** argv )
     Mat image, hsv, h;
     vector<Mat> hsvsplit;
     CvEM em;
-    clock_t timer1, timer2;
-    double seconds;
-    char command[100];
+    time_t outtime;
+    ofstream outfile;
 
     if( argc != 2){     
       system("raspistill -n -w 640 -h 400 -t 0 -o TEST.BMP");
@@ -125,17 +125,17 @@ int main( int argc, char** argv )
         return -1;
     }
 
+    outfile.open("cvirt.dat");
+    outfile << "Time Mean1 Mean2 Frac1 Frac2"  << std::endl;; 
+    time(&outtime);
+
     namedWindow( "Original", CV_WINDOW_AUTOSIZE ); // Create a window for display.
     imshow( "Original", image );                // Show our image inside it.
 
     waitKey(0); // Wait for a keystroke in the window
     destroyWindow( "Original" );
 
-    timer1 = clock();
     cvtColor( image, hsv, CV_BGR2HSV );//convert to hsv
-    timer2 = clock();
-    seconds = (double)(timer2-timer1)/CLOCKS_PER_SEC;
-    cout << seconds << " for cvtColor" << std::endl;
 
     split(hsv, hsvsplit);//split into channels
     h = hsvsplit[0];
@@ -150,11 +150,11 @@ int main( int argc, char** argv )
     h *= 2.0;//opencv h is h/2 to fit in 0-255 range
     hvhist(hsv);
 
-    timer1 = clock();
     hsegment(h, em);
-    timer2 = clock();
-    seconds = (double)(timer2-timer1)/CLOCKS_PER_SEC;
-    cout << seconds << " for EM" << std::endl;
+
+    outfile << ctime(&outtime) << std::endl;
+
+    outfile.close();
 
     return 0;
 
