@@ -103,24 +103,21 @@ int hsegment(Mat h, CvEM emx){
 
 int main( int argc, char** argv )
 {
-    if( argc != 2)
-    {
-     cout <<" Usage: cvirt ImageToLoadAndDisplay" << endl;
-     return -1;
-    }
 
     Mat image, hsv, h;
     vector<Mat> hsvsplit;
     CvEM em;
     clock_t timer1, timer2;
     double seconds;
+    char command[100];
 
-    /*char command[100];
-    strcpy(command,"raspistill -n -w 640 -h 400 -t 0 -o ");
-    strcat(command,argv[1]);
-    system(command);*/
-
-    image = imread(argv[1], CV_LOAD_IMAGE_COLOR); // Read the file
+    if( argc != 2){     
+      system("raspistill -n -w 640 -h 400 -t 0 -o TEST.BMP");
+      image = imread("TEST.BMP", CV_LOAD_IMAGE_COLOR); // Read the file
+    }
+    else{
+      image = imread(argv[1], CV_LOAD_IMAGE_COLOR); // Read the file
+    }
 
     if(! image.data )                      // Check for invalid input
     {
