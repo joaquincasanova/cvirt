@@ -9,6 +9,9 @@
 
 using namespace cv;
 using namespace std;
+ 
+const int N=2;//classes
+const int d=1;//channels
 
 int hvhist(Mat hsv){
     int hbins = 32, vbins = 32;
@@ -48,10 +51,8 @@ int hvhist(Mat hsv){
     return 0;
 }
 
-int hsegment(Mat h, CvEM emx){
+int hsegment(Mat h, CvEM em){
 
-    const int N=2;//classes
-    const int d=1;//channels
     const int n=h.rows*h.cols;
     Mat samples(n,d,CV_32F);
     Mat means(N,d,CV_32F), weights(1,N,CV_32F);
@@ -65,7 +66,6 @@ int hsegment(Mat h, CvEM emx){
     CvEM em;
 
     samples = h.reshape(1,n);
-    cout <<  "samples:  " << samples.rows <<  " dimensions:  " <<  samples.cols <<  std::endl;
 
     // initialize model parameters
     params.covs = NULL;
@@ -78,14 +78,8 @@ int hsegment(Mat h, CvEM emx){
     params.term_crit.max_iter = 300;
     params.term_crit.epsilon = 0.1;
     params.term_crit.type = CV_TERMCRIT_ITER|CV_TERMCRIT_EPS;
-    em.train( samples, Mat(), params, &labels);//run EM
-    means = em.get_means();  
-    weights = em.get_weights();
-    for(int i=0;i<N;i++){
-      for(int j=0;j<d;j++){
-	cout << i << " " << j <<  " " <<  means.ptr<double>(i)[j] << " " <<   weights.ptr<double>(0)[i] <<  std::endl;
-      }
-    };    
+    em.train( samples, Mat(), params, &labels);//run EM 
+
     segment1 = labels.reshape(1,h.rows);
     for(int i=0;i<segment1.rows;i++){
       for(int j=0;j<segment1.cols;j++){
@@ -110,6 +104,7 @@ int main( int argc, char** argv )
     CvEM em;
     time_t outtime;
     ofstream outfile;
+    Mat means(N,d,CV_32F), weights(1,N,CV_32F);
 
     if( argc != 2){     
       system("raspistill -n -w 640 -h 400 -t 0 -o TEST.BMP");
@@ -126,7 +121,7 @@ int main( int argc, char** argv )
     }
 
     outfile.open("cvirt.dat");
-    outfile << "Time Mean1 Mean2 Frac1 Frac2"  << std::endl;; 
+    outfile << "Time Mean1 Frac1 Mean2 Frac2 "  << std::endl; 
     time(&outtime);
 
     namedWindow( "Original", CV_WINDOW_AUTOSIZE ); // Create a window for display.
@@ -150,9 +145,19 @@ int main( int argc, char** argv )
     h *= 2.0;//opencv h is h/2 to fit in 0-255 range
     hvhist(hsv);
 
+    outfile << ctime(&outtime);
+
     hsegment(h, em);
 
-    outfile << ctime(&outtime) << std::endl;
+    means = em.get_means();  
+    weights = em.get_weights();
+    for(int i=0;i<N;i++){
+      for(int j=0;j<d;j++){
+	outfile <<  " " <<  means.ptr<double>(i)[j] << " " <<   weights.ptr<double>(0)[i];
+      }
+    };    
+
+    outfile <<  std::endl
 
     outfile.close();
 
