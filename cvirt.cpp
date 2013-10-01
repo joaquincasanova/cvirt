@@ -39,14 +39,14 @@ int Camera_read(int argc, char **argv){
       sprintf(numstr,"%04d",imnum);
       strcpy(imname,"../pics/");
       strcat(imname,numstr);
-      strcat(imname,".BMP");
+      strcat(imname,".PNG");
       cout << imname << std::endl;
       while(access(imname,F_OK) != -1){
 	imnum++;
 	sprintf(numstr,"%04d",imnum);
 	strcpy(imname,"../pics/");
 	strcat(imname,numstr);
-	strcat(imname,".BMP");
+	strcat(imname,".PNG");
 	cout << imname << std::endl;
 	};
       strcpy(command,"raspistill -n -w 640 -h 400 -t 0 -o ");
