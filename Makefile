@@ -1,8 +1,8 @@
 EXEC = cvirt
 SRC = cvirt.cpp
-INC_DIR = /usr/includes/ 
+INC_DIR = /usr/include/ 
 LIB_DIR = /usr/lib/
-LDLIBS = -lopencv_core -lopencv_highgui -lopencv_imgproc -lopencv_ml
+LDLIBS = -lopencv_core -lopencv_highgui -lopencv_imgproc -lopencv_ml -lbcm2835
 CC = g++
 CFLAGS = -Wall
 LFLAGS = -L$(LIB_DIR) $(LDLIBS)

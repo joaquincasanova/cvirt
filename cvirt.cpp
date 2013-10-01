@@ -6,15 +6,31 @@
 #include <fstream>
 #include <stdlib.h>
 #include <time.h>
+#include <bcm2835.h>
 
 using namespace cv;
 using namespace std;
 
 ofstream outfile;
 char imname[30];
-Mat image;
+Mat image, h;
+double tempfactor = 0.02;
+double temp = 0;
 
-int takeread(int argc, char **argv){
+
+int MLX90614_read() {
+
+  char buf[6];
+  char reg;
+  reg=7;
+  bcm2835_i2c_write(&reg, 1);
+  bcm2835_i2c_read_register_rs(&reg, &buf[0],3);
+  temp = tempfactor * (double)(buf[0]+(buf[1]<<8));
+   
+  return 0;
+}
+
+int Camera_read(int argc, char **argv){
     
     if( argc != 2){
       int imnum=0;
@@ -46,7 +62,7 @@ int takeread(int argc, char **argv){
     return 0;
 }
 
-int hsegment(Mat h){
+int hsegment(void){
  
     const int N=2;//classes
     const int d=1;//channels
@@ -92,22 +108,25 @@ int hsegment(Mat h){
       }
     };    
 
-    outfile <<  std::endl;
-
     return 0;
 }
 
 int main( int argc, char** argv )
 {
 
-    Mat hsv, h;
+    Mat hsv;
     vector<Mat> hsvsplit;
     CvEM em;
     time_t outtime;
     struct tm *ptm;
-    char imname[30];
 
-    takeread(argc, argv);
+    bcm2835_init();
+    bcm2835_i2c_begin();
+    bcm2835_i2c_set_baudrate(25000);
+    bcm2835_i2c_setSlaveAddress(0x5a);  
+
+    Camera_read(argc, argv);
+    MLX90614_read();
 
     if(! image.data ){
       cout <<  "Could not open or find the image" << std::endl ;
@@ -133,10 +152,13 @@ int main( int argc, char** argv )
 
     outfile << ptm->tm_mon << "/"<< ptm->tm_mday << " " << ptm->tm_hour << ":"<< ptm->tm_min << ":"<< ptm->tm_sec << " " << imname;
 
-    hsegment(h);
+    hsegment();
 
+    outfile << " " << temp << std::endl;
 
     outfile.close();
+
+    bcm2835_i2c_end();
 
     return 0;
 
