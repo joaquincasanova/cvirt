@@ -11,42 +11,38 @@ using namespace cv;
 using namespace std;
 
 ofstream outfile;
+char imname[30];
+Mat image;
 
-int hvhist(Mat hsv){
-    int hbins = 32, vbins = 32;
-    int histSize[] = {hbins, vbins};
-    float hrange[] = {0, 180};
-    float vrange[] = {0, 255};
-    const float* ranges[] = { hrange, vrange };
-    Mat hist;
-    // we compute the histogram from the 0-th and 2-st channels
-    int channels[] = {0, 2};
-
-    calcHist( &hsv, 1, channels, Mat(), // do not use mask
-             hist, 2, histSize, ranges,
-             true, // the histogram is uniform
-             false );
-    double maxVal=0;
-    minMaxLoc(hist, 0, &maxVal, 0, 0);
-
-    int scale = 10;
-    Mat histImg = Mat::zeros(vbins*scale, hbins*scale, CV_8UC3);
-
-    for( int hh = 0; hh < hbins; hh++ )
-        for( int vv = 0; vv < vbins; vv++ )
-        {
-            float binVal = hist.at<float>(hh, vv);
-            int intensity = cvRound(binVal*255/maxVal);
-            rectangle( histImg, Point(hh*scale, vv*scale),
-                        Point( (hh+1)*scale - 1, (vv+1)*scale - 1),
-                        Scalar::all(intensity),
-                        CV_FILLED );
-        }
-
-    namedWindow( "H-V Histogram", 1 );
-    imshow( "H-V Histogram", histImg );
-    waitKey(0);
-    destroyWindow( "H-V Histogram" );
+int takeread(int argc, char **argv){
+    
+    if( argc != 2){
+      int imnum=0;
+      char numstr[10];
+      char command[100];
+      sprintf(numstr,"%04d",imnum);
+      strcpy(imname,"../pics/");
+      strcat(imname,numstr);
+      strcat(imname,".BMP");
+      cout << imname << std::endl;
+      while(access(imname,F_OK) != -1){
+	imnum++;
+	sprintf(numstr,"%04d",imnum);
+	strcpy(imname,"../pics/");
+	strcat(imname,numstr);
+	strcat(imname,".BMP");
+	cout << imname << std::endl;
+	};
+      strcpy(command,"raspistill -n -w 640 -h 400 -t 0 -o ");
+      strcat(command,imname);
+      system(command);
+      cout << command << std::endl;
+      image = imread(imname, CV_LOAD_IMAGE_COLOR); // Read the file  
+    }
+    else{
+      image = imread(argv[1], CV_LOAD_IMAGE_COLOR); // Read the file
+      strcpy(imname,argv[1]);
+    }
     return 0;
 }
 
@@ -98,66 +94,44 @@ int hsegment(Mat h){
 
     outfile <<  std::endl;
 
-
-    /*    namedWindow( "Segment", CV_WINDOW_AUTOSIZE ); // Create a window for display.
-    imshow( "Segment", segment3);                // Show our image inside it.
-
-    waitKey(0); // Wait for a keystroke in the window
-    destroyWindow( "Segment" );
-    */
     return 0;
 }
 
 int main( int argc, char** argv )
 {
 
-    Mat image, hsv, h;
+    Mat hsv, h;
     vector<Mat> hsvsplit;
     CvEM em;
     time_t outtime;
     struct tm *ptm;
+    char imname[30];
 
-    if( argc != 2){     
-      system("raspistill -n -w 640 -h 400 -t 0 -o TEST.BMP");
-      image = imread("TEST.BMP", CV_LOAD_IMAGE_COLOR); // Read the file
-    }
-    else{
-      image = imread(argv[1], CV_LOAD_IMAGE_COLOR); // Read the file
-    }
+    takeread(argc, argv);
 
-    if(! image.data )                      // Check for invalid input
-    {
-        cout <<  "Could not open or find the image" << std::endl ;
-        return -1;
+    if(! image.data ){
+      cout <<  "Could not open or find the image" << std::endl ;
+      return -1;
     }
 
-    outfile.open("cvirt.dat");
-    outfile << "Time Mean1 Frac1 Mean2 Frac2 "  << std::endl; 
+    if (!ifstream("cvirt.dat")){
+      outfile.open("cvirt.dat",ios_base::out|ios_base::app);
+      outfile << "Time Name Mean1 Frac1 Mean2 Frac2 "  << std::endl; 
+    }else{
+      outfile.open("cvirt.dat",ios_base::out|ios_base::app);
+    };
     time(&outtime);
     ptm = gmtime(&outtime);
-    /*
-    namedWindow( "Original", CV_WINDOW_AUTOSIZE ); // Create a window for display.
-    imshow( "Original", image );                // Show our image inside it.
 
-    waitKey(0); // Wait for a keystroke in the window
-    destroyWindow( "Original" );
-    */
     cvtColor( image, hsv, CV_BGR2HSV );//convert to hsv
 
     split(hsv, hsvsplit);//split into channels
     h = hsvsplit[0];
-    /*
-    namedWindow( "Hue", CV_WINDOW_AUTOSIZE ); // Create a window for display.
-    imshow( "Hue", h);                // Show our image inside it.
 
-    waitKey(0); // Wait for a keystroke in the window
-    destroyWindow( "Hue" );
-    */
     h.convertTo(h, CV_32F);
     h *= 2.0;//opencv h is h/2 to fit in 0-255 range
-    //hvhist(hsv);
 
-    outfile << ptm->tm_mon << "/"<< ptm->tm_mday << " " << ptm->tm_hour << ":"<< ptm->tm_min << ":"<< ptm->tm_sec << " ";
+    outfile << ptm->tm_mon << "/"<< ptm->tm_mday << " " << ptm->tm_hour << ":"<< ptm->tm_min << ":"<< ptm->tm_sec << " " << imname;
 
     hsegment(h);
 
