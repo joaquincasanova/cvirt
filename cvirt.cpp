@@ -9,9 +9,8 @@
 
 using namespace cv;
 using namespace std;
- 
-const int N=2;//classes
-const int d=1;//channels
+
+ofstream outfile;
 
 int hvhist(Mat hsv){
     int hbins = 32, vbins = 32;
@@ -51,8 +50,10 @@ int hvhist(Mat hsv){
     return 0;
 }
 
-int hsegment(Mat h, CvEM em){
-
+int hsegment(Mat h){
+ 
+    const int N=2;//classes
+    const int d=1;//channels
     const int n=h.rows*h.cols;
     Mat samples(n,d,CV_32F);
     Mat means(N,d,CV_32F), weights(1,N,CV_32F);
@@ -87,12 +88,23 @@ int hsegment(Mat h, CvEM em){
 	circle(segment3,Point(j,i),1,c,CV_FILLED);
       }
     } 
-    namedWindow( "Segment", CV_WINDOW_AUTOSIZE ); // Create a window for display.
+    means = em.get_means();  
+    weights = em.get_weights();
+    for(int i=0;i<N;i++){
+      for(int j=0;j<d;j++){
+	outfile <<  " " <<  means.ptr<double>(i)[j] << " " <<   weights.ptr<double>(0)[i];
+      }
+    };    
+
+    outfile <<  std::endl;
+
+
+    /*    namedWindow( "Segment", CV_WINDOW_AUTOSIZE ); // Create a window for display.
     imshow( "Segment", segment3);                // Show our image inside it.
 
     waitKey(0); // Wait for a keystroke in the window
     destroyWindow( "Segment" );
-    
+    */
     return 0;
 }
 
@@ -103,8 +115,7 @@ int main( int argc, char** argv )
     vector<Mat> hsvsplit;
     CvEM em;
     time_t outtime;
-    ofstream outfile;
-    Mat means(N,d,CV_32F), weights(1,N,CV_32F);
+    struct tm *ptm;
 
     if( argc != 2){     
       system("raspistill -n -w 640 -h 400 -t 0 -o TEST.BMP");
@@ -123,41 +134,33 @@ int main( int argc, char** argv )
     outfile.open("cvirt.dat");
     outfile << "Time Mean1 Frac1 Mean2 Frac2 "  << std::endl; 
     time(&outtime);
-
+    ptm = gmtime(&outtime);
+    /*
     namedWindow( "Original", CV_WINDOW_AUTOSIZE ); // Create a window for display.
     imshow( "Original", image );                // Show our image inside it.
 
     waitKey(0); // Wait for a keystroke in the window
     destroyWindow( "Original" );
-
+    */
     cvtColor( image, hsv, CV_BGR2HSV );//convert to hsv
 
     split(hsv, hsvsplit);//split into channels
     h = hsvsplit[0];
-
+    /*
     namedWindow( "Hue", CV_WINDOW_AUTOSIZE ); // Create a window for display.
     imshow( "Hue", h);                // Show our image inside it.
 
     waitKey(0); // Wait for a keystroke in the window
     destroyWindow( "Hue" );
-
+    */
     h.convertTo(h, CV_32F);
     h *= 2.0;//opencv h is h/2 to fit in 0-255 range
-    hvhist(hsv);
+    //hvhist(hsv);
 
-    outfile << ctime(&outtime);
+    outfile << ptm->tm_mon << "/"<< ptm->tm_mday << " " << ptm->tm_hour << ":"<< ptm->tm_min << ":"<< ptm->tm_sec << " ";
 
-    hsegment(h, em);
+    hsegment(h);
 
-    means = em.get_means();  
-    weights = em.get_weights();
-    for(int i=0;i<N;i++){
-      for(int j=0;j<d;j++){
-	outfile <<  " " <<  means.ptr<double>(i)[j] << " " <<   weights.ptr<double>(0)[i];
-      }
-    };    
-
-    outfile <<  std::endl
 
     outfile.close();
 
