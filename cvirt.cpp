@@ -13,11 +13,15 @@ using namespace std;
 
 ofstream outfile;
 char imname[30];
+char outname[30];
+int imnum = 0;
+int imnummax = 10;
 Mat image, h;
 double tempfactor = 0.02;
 double temp = 0;
+char numstr[10];
 
-int MLX90614_read() {
+int irtread() {
 
   char buf[6];
   char reg;
@@ -29,39 +33,29 @@ int MLX90614_read() {
   return 0;
 }
 
-int Camera_read(int argc, char **argv){
-    
-    if( argc != 2){
-      int imnum=0;
-      char numstr[10];
-      char command[100];
-      sprintf(numstr,"%04d",imnum);
-      strcpy(imname,"../pics/");
-      strcat(imname,numstr);
-      strcat(imname,".BMP");
-      cout << imname << std::endl;
-      while(access(imname,F_OK) != -1){
-	imnum++;
-	sprintf(numstr,"%04d",imnum);
-	strcpy(imname,"../pics/");
-	strcat(imname,numstr);
-	strcat(imname,".BMP");
-	cout << imname << std::endl;
-	};
-      strcpy(command,"raspistill -n -w 640 -h 400 -t 0 -o ");
-      strcat(command,imname);
-      system(command);
-      cout << command << std::endl;
-      image = imread(imname, CV_LOAD_IMAGE_COLOR); // Read the file  
-    }
-    else{
-      image = imread(argv[1], CV_LOAD_IMAGE_COLOR); // Read the file
-      strcpy(imname,argv[1]);
-    }
-    return 0;
-}
+int firstimage(){
+  char command[100];
+  sprintf(numstr,"%04d",imnum);
+  strcpy(imname,"../pics/");
+  strcat(imname,numstr);
+  strcat(imname,".BMP");
+  cout << imname << std::endl;
+  while(access(imname,F_OK) != -1){
+    imnum++;
+    sprintf(numstr,"%04d",imnum);
+    strcpy(imname,"../pics/");
+    strcat(imname,numstr);
+    strcat(imname,".BMP");
+    cout << imname << std::endl;
+  };
+  strcpy(command,"raspistill -n -w 640 -h 400 -t 0 -o ");
+  strcat(command,imname);
+  system(command);
+  cout << command << std::endl;
+  return 0;
+};
 
-int hsegment(void){
+int hsegment(){
  
     const int N=2;//classes
     const int d=1;//channels
@@ -107,39 +101,26 @@ int hsegment(void){
       }
     };    
 
-    imwrite("../pics/SEGMENT.BMP",segment3);
+    imwrite(outname,segment3);
 
     return 0;
 }
 
-int main( int argc, char** argv )
-{
+int sample(){
 
     Mat hsv;
     vector<Mat> hsvsplit;
-    CvEM em;
     time_t outtime;
     struct tm *ptm;
 
-    bcm2835_init();
-    bcm2835_i2c_begin();
-    bcm2835_i2c_set_baudrate(25000);
-    bcm2835_i2c_setSlaveAddress(0x5a);  
-
-    Camera_read(argc, argv);
-    MLX90614_read();
+    image = imread(imname, CV_LOAD_IMAGE_COLOR); // Read the file
+    irtread();
 
     if(! image.data ){
       cout <<  "Could not open or find the image" << std::endl ;
       return -1;
     }
 
-    if (!ifstream("cvirt.dat")){
-      outfile.open("cvirt.dat",ios_base::out|ios_base::app);
-      outfile << "Time Name Mean1 Frac1 Mean2 Frac2 "  << std::endl; 
-    }else{
-      outfile.open("cvirt.dat",ios_base::out|ios_base::app);
-    };
     time(&outtime);
     ptm = gmtime(&outtime);
 
@@ -153,16 +134,71 @@ int main( int argc, char** argv )
 
     outfile << ptm->tm_mon << "/"<< ptm->tm_mday << " " << ptm->tm_hour << ":"<< ptm->tm_min << ":"<< ptm->tm_sec << " " << imname;
 
-    hsegment();
+    hsegment();//segment image, write EM parameters to file, write segmented image to file
 
     outfile << " " << temp << std::endl;
 
-    outfile.close();
-
-    bcm2835_i2c_end();
-
-    bcm2835_close();
-
     return 0;
+}
+
+int main( int argc, char** argv ){
+
+  if(!bcm2835_init()){
+    cout<<"Failed bcm2835 init"<<std::endl;
+    return -1;
+  };
+
+  bcm2835_i2c_begin();
+  bcm2835_i2c_set_baudrate(25000);
+  bcm2835_i2c_setSlaveAddress(0x5a);  
+  
+  if (!ifstream("cvirt.dat")){
+    outfile.open("cvirt.dat",ios_base::out|ios_base::app);
+    outfile << "Time Name Mean1 Frac1 Mean2 Frac2 "  << std::endl; 
+  }else{
+    outfile.open("cvirt.dat",ios_base::out|ios_base::app);
+  };
+  
+  if(argc<2){
+    firstimage();
+  }else{
+    strcpy(imname,"../pics/");
+    strcat(imname,argv[1]);   
+  };
+  
+  strcpy(outname,"../pics/S");
+  if(argc<2){
+    strcat(outname,numstr);
+    strcat(outname,".BMP");
+  }else{
+    strcat(outname,argv[1]);
+  }
+
+  sample();
+
+  if(argc<2){  
+    while(imnum<imnummax-1){
+      imnum++;   
+      char command[100];
+      sprintf(numstr,"%04d",imnum);
+      strcpy(imname,"../pics/");
+      strcat(imname,numstr);
+      strcat(imname,".BMP");
+      strcpy(command,"raspistill -n -w 640 -h 400 -t 0 -o ");
+      strcat(command,imname);
+      system(command);
+      cout << command << std::endl;
+      strcpy(outname,"../pics/S");
+      strcat(outname,numstr);
+      strcat(outname,".BMP");
+      sample();
+    }
+  }
+
+  outfile.close();
+  bcm2835_i2c_end();
+  bcm2835_close();
+
+  return 0;
 
 }

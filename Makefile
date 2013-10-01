@@ -18,4 +18,4 @@ $(OBJS) : $(SRC)
 	$(CC) $(CFLAGS) $(IFLAGS) -c $(SRC)
 
 clean:
-	rm $(OBJS) *~
+	rm $(EXEC) $(OBJS) *~
