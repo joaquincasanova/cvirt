@@ -17,7 +17,6 @@ Mat image, h;
 double tempfactor = 0.02;
 double temp = 0;
 
-
 int MLX90614_read() {
 
   char buf[6];
@@ -39,14 +38,14 @@ int Camera_read(int argc, char **argv){
       sprintf(numstr,"%04d",imnum);
       strcpy(imname,"../pics/");
       strcat(imname,numstr);
-      strcat(imname,".PNG");
+      strcat(imname,".BMP");
       cout << imname << std::endl;
       while(access(imname,F_OK) != -1){
 	imnum++;
 	sprintf(numstr,"%04d",imnum);
 	strcpy(imname,"../pics/");
 	strcat(imname,numstr);
-	strcat(imname,".PNG");
+	strcat(imname,".BMP");
 	cout << imname << std::endl;
 	};
       strcpy(command,"raspistill -n -w 640 -h 400 -t 0 -o ");
@@ -108,6 +107,8 @@ int hsegment(void){
       }
     };    
 
+    imwrite("../pics/SEGMENT.BMP",segment3);
+
     return 0;
 }
 
@@ -159,6 +160,8 @@ int main( int argc, char** argv )
     outfile.close();
 
     bcm2835_i2c_end();
+
+    bcm2835_close();
 
     return 0;
 
